@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrediGaMi · Iniciar sesión</title>
+<link rel="icon" href="../../assets/img/logo-credigami.jpeg">
+<link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+
+<div class="login-envoltura">
+  <div class="login-lado">
+    <div class="login-lado__marca">
+      <img src="../../assets/img/logo-credigami.jpeg" alt="Logo CrediGaMi">
+      <strong>CrediGaMi</strong>
+    </div>
+
+    <div class="login-lado__eslogan">
+      <h2>Préstamos pequeños,<br>gestión ordenada.</h2>
+      <p>Clientes, préstamos, cuotas, caja y reportes en un solo sistema, con firma digital y verificación por huella para cada contrato.</p>
+    </div>
+
+    <div class="login-lado__pie">© 2026 CrediGaMi — Tu apoyo crece</div>
+  </div>
+
+  <div class="login-form-lado">
+    <form class="login-form" id="form-login">
+      <h1>Bienvenido de nuevo</h1>
+      <p>Ingresa tus credenciales para entrar al sistema.</p>
+
+      <div class="campo">
+        <label for="usuario">Usuario</label>
+        <input type="text" id="usuario" placeholder="asesor" required>
+      </div>
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <input type="password" id="clave" placeholder="••••••••" required>
+      </div>
+      <div class="campo">
+        <label for="rol">Ingresar como</label>
+        <select id="rol">
+          <option value="Asesor de crédito">Asesor de crédito</option>
+          <option value="Cajero">Cajero</option>
+          <option value="Administrador">Administrador</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primario btn-bloque">Iniciar sesión</button>
+
+      <div class="login-demo">
+        Acceso de demostración: usuario <code>asesor</code> / <code>admin</code>, cualquier contraseña.
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="../../assets/js/data.js"></script>
+<script>
+  document.getElementById('form-login').addEventListener('submit', function(e){
+    e.preventDefault();
+    const usuario = document.getElementById('usuario').value.trim() || 'asesor';
+    const rol = document.getElementById('rol').value;
+    const config = CG_DATA.config.obtener();
+    const encontrado = config.usuarios.find(u => u.usuario.toLowerCase() === usuario.toLowerCase());
+    const perfil = encontrado || { nombre: usuario, iniciales: usuario.slice(0,2).toUpperCase() };
+    localStorage.setItem('cg_usuario', JSON.stringify({ nombre: perfil.nombre, rol: rol, iniciales: perfil.iniciales }));
+    window.location.href = '../dashboard/index.html';
+  });
+</script>
+</body>
+</html>

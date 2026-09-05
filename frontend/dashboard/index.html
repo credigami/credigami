@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrediGaMi · Panel general</title>
+<link rel="icon" href="../../assets/img/logo-credigami.jpeg">
+<link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+<div class="app-shell">
+  <!-- sidebar + topbar se insertan por JS (layout.js) -->
+</div>
+
+<script src="../../assets/js/data.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script>
+  const main = CG_LAYOUT.render('dashboard', 'Panel general', 'Panel general');
+
+  const prestamos = CG_DATA.prestamos.listar();
+  const pagos = CG_DATA.pagos.listar();
+
+  const carteraActiva = prestamos.filter(p=>p.estado==='activo').reduce((s,p)=>s+p.saldo,0);
+  const prestamosActivos = prestamos.filter(p=>p.estado==='activo').length;
+  const enMora = prestamos.filter(p=>p.mora>0).length;
+  const cobradoMes = pagos.filter(p=>p.estado==='pagada').reduce((s,p)=>s+p.monto,0);
+
+  main.innerHTML = `
+    <div class="grid-kpi">
+      <div class="kpi">
+        <div class="kpi__cabeza">
+          <div><div class="kpi__valor">${CG_DATA.moneda(carteraActiva)}</div><div class="kpi__etiqueta">Cartera activa</div></div>
+          <div class="kpi__icono" style="background:var(--info-fondo);color:var(--azul-oscuro);">${CG_LAYOUT.iconoSVG('prestamos')}</div>
+        </div>
+        <span class="kpi__delta pos">▲ 4.2% vs. mes anterior</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi__cabeza">
+          <div><div class="kpi__valor">${prestamosActivos}</div><div class="kpi__etiqueta">Préstamos activos</div></div>
+          <div class="kpi__icono" style="background:var(--exito-fondo);color:var(--exito);">${CG_LAYOUT.iconoSVG('clientes')}</div>
+        </div>
+        <span class="kpi__delta pos">▲ 2 nuevos esta semana</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi__cabeza">
+          <div><div class="kpi__valor">${enMora}</div><div class="kpi__etiqueta">Préstamos en mora</div></div>
+          <div class="kpi__icono" style="background:var(--alerta-fondo);color:var(--alerta);">${CG_LAYOUT.iconoSVG('reportes')}</div>
+        </div>
+        <span class="kpi__delta neg">Requiere seguimiento</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi__cabeza">
+          <div><div class="kpi__valor">${CG_DATA.moneda(cobradoMes)}</div><div class="kpi__etiqueta">Cobrado (histórico demo)</div></div>
+          <div class="kpi__icono" style="background:var(--aviso-fondo);color:var(--aviso);">${CG_LAYOUT.iconoSVG('caja')}</div>
+        </div>
+        <span class="kpi__delta pos">▲ Al día</span>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:18px; align-items:start;">
+      <div class="tarjeta">
+        <div class="tarjeta__encabezado">
+          <div><h3>Cobros de los últimos 6 meses</h3><p>Total recuperado por mes (datos de demostración)</p></div>
+        </div>
+        <div class="tarjeta__cuerpo" id="grafico-cobros"></div>
+      </div>
+
+      <div class="tarjeta">
+        <div class="tarjeta__encabezado"><h3>Accesos rápidos</h3></div>
+        <div class="tarjeta__cuerpo" style="display:flex; flex-direction:column; gap:10px;">
+          <a class="btn btn-oscuro btn-bloque" href="../prestamos/index.html">Nueva solicitud de préstamo</a>
+          <a class="btn btn-linea btn-bloque" href="../clientes/index.html">Registrar cliente</a>
+          <a class="btn btn-linea btn-bloque" href="../pagos/index.html">Registrar pago</a>
+          <a class="btn btn-linea btn-bloque" href="../caja/index.html">Ver caja del día</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="tarjeta" style="margin-top:18px;">
+      <div class="tarjeta__encabezado">
+        <div><h3>Préstamos recientes</h3><p>Últimas solicitudes registradas en el sistema</p></div>
+        <a class="btn btn-linea btn-sm" href="../prestamos/index.html">Ver todos</a>
+      </div>
+      <div class="tabla-envoltura">
+        <table>
+          <thead><tr><th>Código</th><th>Cliente</th><th>Monto</th><th>Cuota</th><th>Saldo</th><th>Estado</th></tr></thead>
+          <tbody>
+            ${prestamos.slice(0,6).map(p => `
+              <tr>
+                <td class="celda-fuerte">${p.id}</td>
+                <td>${p.cliente}</td>
+                <td>${CG_DATA.moneda(p.monto)}</td>
+                <td>${CG_DATA.moneda(p.cuota)}</td>
+                <td>${CG_DATA.moneda(p.saldo)}</td>
+                <td>${estadoBadge(p.estado, p.mora)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  function estadoBadge(estado, mora){
+    if (mora>0) return '<span class="badge badge-alerta">En mora</span>';
+    if (estado==='activo') return '<span class="badge badge-info">Activo</span>';
+    if (estado==='pagado') return '<span class="badge badge-exito">Pagado</span>';
+    return '<span class="badge badge-aviso">Pendiente</span>';
+  }
+
+  // Gráfico simple de barras en SVG (sin dependencias externas)
+  (function dibujarGrafico(){
+    const datos = [12400, 15800, 14100, 17600, 16200, cobradoMes || 9000];
+    const meses = ['Abr','May','Jun','Jul','Ago','Sep'];
+    const max = Math.max(...datos) * 1.15;
+    const alto = 200, ancho = 460, base = 24, espacio = ancho/datos.length;
+    let barras = '';
+    datos.forEach((v,i)=>{
+      const h = (v/max) * (alto-base);
+      const x = i*espacio + espacio*0.22;
+      const y = alto-base-h;
+      const w = espacio*0.56;
+      barras += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${i===datos.length-1?'var(--naranja)':'var(--azul-medio)'}"></rect>`;
+      barras += `<text x="${x+w/2}" y="${alto-6}" font-size="10" fill="var(--texto-tenue)" text-anchor="middle">${meses[i]}</text>`;
+    });
+    document.getElementById('grafico-cobros').innerHTML =
+      `<svg viewBox="0 0 ${ancho} ${alto}" style="width:100%; height:220px;">${barras}</svg>`;
+  })();
+</script>
+</body>
+</html>

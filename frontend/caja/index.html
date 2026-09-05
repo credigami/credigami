@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrediGaMi · Caja</title>
+<link rel="icon" href="../../assets/img/logo-credigami.jpeg">
+<link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+<div class="app-shell"></div>
+
+<script src="../../assets/js/data.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script>
+  const main = CG_LAYOUT.render('caja', 'Caja', 'Caja');
+
+  function saldoActual(caja){
+    const ingresos = caja.movimientos.filter(m=>m.tipo==='ingreso').reduce((s,m)=>s+m.monto,0);
+    const egresos = caja.movimientos.filter(m=>m.tipo==='egreso').reduce((s,m)=>s+m.monto,0);
+    return caja.saldoInicial + ingresos - egresos;
+  }
+
+  function render(){
+    const caja = CG_DATA.caja.obtener();
+    main.innerHTML = `
+      <div class="grid-kpi" style="grid-template-columns:repeat(3,1fr);">
+        <div class="kpi">
+          <div class="kpi__etiqueta">Saldo inicial del día</div>
+          <div class="kpi__valor">${CG_DATA.moneda(caja.saldoInicial)}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__etiqueta">Saldo actual</div>
+          <div class="kpi__valor">${CG_DATA.moneda(saldoActual(caja))}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__etiqueta">Estado de caja</div>
+          <div class="kpi__valor" style="font-size:18px;">${caja.abierta ? '<span class=\"badge badge-exito\">Abierta</span>' : '<span class=\"badge badge-neutro\">Cerrada</span>'}</div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start;">
+        <div class="tarjeta">
+          <div class="tarjeta__encabezado"><h3>Registrar movimiento</h3></div>
+          <div class="tarjeta__cuerpo">
+            <div class="fila-campos">
+              <div class="campo">
+                <label>Tipo</label>
+                <select id="mov-tipo"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select>
+              </div>
+              <div class="campo">
+                <label>Monto (L.)</label>
+                <input type="number" id="mov-monto" min="1" placeholder="500">
+              </div>
+            </div>
+            <div class="campo">
+              <label>Concepto</label>
+              <input type="text" id="mov-concepto" placeholder="Ej. Compra de papelería">
+            </div>
+            <button class="btn btn-oscuro btn-bloque" id="mov-guardar">Agregar movimiento</button>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <div class="tarjeta__encabezado"><h3>Movimientos del día</h3></div>
+          <div class="tabla-envoltura">
+            <table>
+              <thead><tr><th>Concepto</th><th>Tipo</th><th>Monto</th><th>Fecha</th></tr></thead>
+              <tbody>
+                ${caja.movimientos.map(m => `
+                  <tr>
+                    <td>${m.concepto}</td>
+                    <td>${m.tipo==='ingreso' ? '<span class="badge badge-exito">Ingreso</span>' : '<span class="badge badge-alerta">Egreso</span>'}</td>
+                    <td class="celda-fuerte">${CG_DATA.moneda(m.monto)}</td>
+                    <td class="celda-suave">${m.fecha}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('mov-guardar').addEventListener('click', () => {
+      const tipo = document.getElementById('mov-tipo').value;
+      const monto = Number(document.getElementById('mov-monto').value);
+      const concepto = document.getElementById('mov-concepto').value.trim();
+      if (!monto || !concepto){ CG_TOAST('Completa el concepto y el monto', 'alerta'); return; }
+      CG_DATA.caja.movimiento(tipo, concepto, monto);
+      render();
+      CG_TOAST('Movimiento registrado', 'exito');
+    });
+  }
+  render();
+</script>
+</body>
+</html>

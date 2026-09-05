@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrediGaMi · Préstamos</title>
+<link rel="icon" href="../../assets/img/logo-credigami.jpeg">
+<link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+<div class="app-shell"></div>
+
+<div class="modal-fondo" id="modal-prestamo">
+  <div class="modal modal--ancho">
+    <div class="modal__cabeza">
+      <h3>Nueva solicitud de préstamo</h3>
+      <button class="modal__cerrar" id="cerrar-modal-prestamo">✕</button>
+    </div>
+
+    <div class="modal__cuerpo">
+      <div class="pasos" id="pasos">
+        <div class="paso activo" data-paso="1"><div class="paso__circulo">1</div><div class="paso__texto">Datos del préstamo</div></div>
+        <div class="paso__linea"></div>
+        <div class="paso" data-paso="2"><div class="paso__circulo">2</div><div class="paso__texto">Firma del asesor</div></div>
+        <div class="paso__linea"></div>
+        <div class="paso" data-paso="3"><div class="paso__circulo">3</div><div class="paso__texto">Firma del cliente</div></div>
+        <div class="paso__linea"></div>
+        <div class="paso" data-paso="4"><div class="paso__circulo">4</div><div class="paso__texto">Huella digital</div></div>
+      </div>
+
+      <!-- Paso 1 -->
+      <div class="paso-panel" id="panel-1">
+        <div class="fila-campos">
+          <div class="campo">
+            <label>Cliente</label>
+            <select id="p-cliente" required></select>
+          </div>
+          <div class="campo">
+            <label>Monto solicitado (L.)</label>
+            <input type="number" id="p-monto" min="500" step="1" placeholder="8000" required>
+          </div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo">
+            <label>Tasa de interés mensual (%)</label>
+            <input type="number" id="p-tasa" step="0.1" value="12" required>
+          </div>
+          <div class="campo">
+            <label>Plazo (meses)</label>
+            <input type="number" id="p-plazo" min="1" max="36" value="6" required>
+          </div>
+        </div>
+        <div class="tarjeta" style="background:var(--fondo); box-shadow:none;">
+          <div class="tarjeta__cuerpo" style="display:flex; gap:24px; flex-wrap:wrap;">
+            <div><div class="texto-tenue" style="font-size:12px;">Cuota mensual estimada</div><div class="celda-fuerte" id="preview-cuota" style="font-size:18px;">L. 0.00</div></div>
+            <div><div class="texto-tenue" style="font-size:12px;">Total a pagar</div><div class="celda-fuerte" id="preview-total" style="font-size:18px;">L. 0.00</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 2: firma del asesor -->
+      <div class="paso-panel" id="panel-2" style="display:none;">
+        <div class="panel-firma">
+          <h4>Firma del asesor de crédito</h4>
+          <p>Dibuja tu firma dentro del recuadro usando el mouse o el dedo (pantalla táctil).</p>
+          <canvas class="lienzo-firma" id="lienzo-asesor"></canvas>
+          <div class="firma-acciones">
+            <button type="button" class="btn btn-sm btn-linea" id="limpiar-asesor">Limpiar</button>
+            <button type="button" class="btn btn-sm btn-oscuro" id="guardar-asesor">Confirmar firma</button>
+          </div>
+          <div class="firma-estado pendiente" id="estado-asesor">● Firma pendiente</div>
+        </div>
+      </div>
+
+      <!-- Paso 3: firma del cliente -->
+      <div class="paso-panel" id="panel-3" style="display:none;">
+        <div class="panel-firma">
+          <h4>Firma del cliente</h4>
+          <p>El cliente debe firmar en el recuadro para aceptar los términos del préstamo.</p>
+          <canvas class="lienzo-firma" id="lienzo-cliente"></canvas>
+          <div class="firma-acciones">
+            <button type="button" class="btn btn-sm btn-linea" id="limpiar-cliente">Limpiar</button>
+            <button type="button" class="btn btn-sm btn-oscuro" id="guardar-cliente">Confirmar firma</button>
+          </div>
+          <div class="firma-estado pendiente" id="estado-cliente">● Firma pendiente</div>
+        </div>
+      </div>
+
+      <!-- Paso 4: huella digital -->
+      <div class="paso-panel" id="panel-4" style="display:none;">
+        <div class="panel-firma">
+          <h4>Verificación por huella digital</h4>
+          <p>Se usará el lector de huella del equipo (Windows Hello, Touch ID o huella de Android) para confirmar la identidad del cliente.</p>
+          <div class="huella-caja">
+            <div class="huella-icono" id="huella-icono">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2a7 7 0 0 0-7 7c0 4-1 6-2 8"/><path d="M12 2a7 7 0 0 1 7 7c0 2.3.3 4 1 5.5"/><path d="M8 18c1.5-2 2-4 2-9a2 2 0 0 1 4 0c0 6 2 8 3 9"/><path d="M12 22c-1-1-2-2-2-4"/></svg>
+            </div>
+            <div id="huella-texto" class="texto-suave" style="font-size:13px; margin-bottom:14px;">Aún no se ha verificado la huella digital.</div>
+            <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+              <button type="button" class="btn btn-primario" id="btn-huella">Verificar con huella digital</button>
+              <button type="button" class="btn btn-linea" id="btn-omitir-huella">Omitir por ahora</button>
+            </div>
+            <div id="huella-respaldo" style="display:none; margin-top:16px; text-align:left;">
+              <div class="campo mb-0">
+                <label>Este equipo no tiene lector de huella disponible: adjunta una constancia (foto de huella o firma de aceptación)</label>
+                <input type="file" id="huella-archivo" accept="image/*">
+              </div>
+            </div>
+            <p class="texto-tenue" style="font-size:11.5px; margin-top:12px;">La huella es opcional: puedes formalizar el préstamo sin ella y completarla después desde el detalle del préstamo.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal__pie">
+      <button type="button" class="btn btn-linea" id="paso-atras">Atrás</button>
+      <button type="button" class="btn btn-oscuro" id="paso-siguiente">Siguiente</button>
+      <button type="button" class="btn btn-primario" id="paso-finalizar" style="display:none;">Formalizar préstamo</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../assets/js/data.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script src="../../assets/js/firma.js"></script>
+<script>
+  const main = CG_LAYOUT.render('prestamos', 'Préstamos', 'Préstamos');
+
+  main.innerHTML = `
+    <div class="tarjeta">
+      <div class="tarjeta__encabezado">
+        <div><h3>Solicitudes y contratos</h3><p>Firma del asesor, firma del cliente y huella digital habilitadas en cada solicitud nueva</p></div>
+        <button class="btn btn-primario" id="abrir-modal-prestamo">+ Nueva solicitud</button>
+      </div>
+      <div class="tabla-envoltura">
+        <table>
+          <thead><tr><th>Código</th><th>Cliente</th><th>Monto</th><th>Cuota</th><th>Estado</th><th>Firmas / Huella</th><th></th></tr></thead>
+          <tbody id="tabla-prestamos"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  function estadoBadge(estado, mora){
+    if (mora>0) return '<span class="badge badge-alerta">En mora</span>';
+    if (estado==='activo') return '<span class="badge badge-info">Activo</span>';
+    if (estado==='pagado') return '<span class="badge badge-exito">Pagado</span>';
+    return '<span class="badge badge-aviso">Pendiente</span>';
+  }
+  function marcaFirma(valor, texto){
+    return valor ? `<span class="badge badge-exito" title="Registrada">${texto} ✓</span>` : `<span class="badge badge-neutro">${texto} ✕</span>`;
+  }
+  function marcaHuella(huella){
+    if (huella && huella.ok) return '<span class="badge badge-exito" title="Verificada">Huella ✓</span>';
+    if (huella && huella.omitida) return '<span class="badge badge-aviso" title="Pendiente">Huella pendiente</span>';
+    return '<span class="badge badge-neutro">Huella ✕</span>';
+  }
+
+  function pintarPrestamos(){
+    const prestamos = CG_DATA.prestamos.listar();
+    document.getElementById('tabla-prestamos').innerHTML = prestamos.map(p => `
+      <tr>
+        <td class="celda-fuerte">${p.id}</td>
+        <td>${p.cliente}</td>
+        <td>${CG_DATA.moneda(p.monto)}</td>
+        <td>${CG_DATA.moneda(p.cuota)}</td>
+        <td>${estadoBadge(p.estado, p.mora)}</td>
+        <td>
+          <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            ${marcaFirma(p.firmaAsesor,'Asesor')}
+            ${marcaFirma(p.firmaCliente,'Cliente')}
+            ${marcaHuella(p.huella)}
+          </div>
+        </td>
+        <td style="text-align:right;"><a class="btn btn-sm btn-linea" href="../pagos/index.html">Ver cuotas</a></td>
+      </tr>`).join('');
+  }
+  pintarPrestamos();
+
+  /* ---------------- Modal / wizard ---------------- */
+  const modal = document.getElementById('modal-prestamo');
+  const clienteSelect = document.getElementById('p-cliente');
+  let pasoActual = 1;
+  let firmaAsesorPad, firmaClientePad;
+  let datosTemp = { firmaAsesor:null, firmaCliente:null, huella:null };
+
+  function cargarClientesSelect(){
+    const clientes = CG_DATA.clientes.listar();
+    clienteSelect.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre} — ${c.dni}</option>`).join('');
+  }
+
+  function calcularCuota(monto, tasaMensual, meses){
+    const i = tasaMensual/100;
+    if (i===0) return monto/meses;
+    return (monto * i) / (1 - Math.pow(1+i, -meses));
+  }
+  function actualizarPreview(){
+    const monto = Number(document.getElementById('p-monto').value)||0;
+    const tasa = Number(document.getElementById('p-tasa').value)||0;
+    const plazo = Number(document.getElementById('p-plazo').value)||1;
+    const cuota = calcularCuota(monto, tasa, plazo);
+    document.getElementById('preview-cuota').textContent = CG_DATA.moneda(cuota);
+    document.getElementById('preview-total').textContent = CG_DATA.moneda(cuota*plazo);
+  }
+  ['p-monto','p-tasa','p-plazo'].forEach(idc => document.getElementById(idc).addEventListener('input', actualizarPreview));
+
+  function mostrarPaso(n){
+    pasoActual = n;
+    for(let i=1;i<=4;i++) document.getElementById('panel-'+i).style.display = (i===n)?'block':'none';
+    document.querySelectorAll('.paso').forEach(el => {
+      const num = Number(el.dataset.paso);
+      el.classList.toggle('activo', num===n);
+      el.classList.toggle('hecho', num<n);
+    });
+    document.getElementById('paso-atras').style.display = (n===1)?'none':'inline-flex';
+    document.getElementById('paso-siguiente').style.display = (n===4)?'none':'inline-flex';
+    document.getElementById('paso-finalizar').style.display = (n===4)?'inline-flex':'none';
+
+    if (n===2 && !firmaAsesorPad) firmaAsesorPad = CG_FIRMA.crearFirmaPad(document.getElementById('lienzo-asesor'));
+    if (n===3 && !firmaClientePad) firmaClientePad = CG_FIRMA.crearFirmaPad(document.getElementById('lienzo-cliente'));
+  }
+
+  document.getElementById('abrir-modal-prestamo').addEventListener('click', () => {
+    cargarClientesSelect();
+    datosTemp = { firmaAsesor:null, firmaCliente:null, huella:null };
+    document.getElementById('p-monto').value='';
+    document.getElementById('p-tasa').value=12;
+    document.getElementById('p-plazo').value=6;
+    document.getElementById('estado-asesor').textContent='● Firma pendiente';
+    document.getElementById('estado-asesor').className='firma-estado pendiente';
+    document.getElementById('estado-cliente').textContent='● Firma pendiente';
+    document.getElementById('estado-cliente').className='firma-estado pendiente';
+    document.getElementById('huella-icono').className='huella-icono';
+    document.getElementById('huella-texto').textContent='Aún no se ha verificado la huella digital.';
+    document.getElementById('huella-respaldo').style.display='none';
+    actualizarPreview();
+    mostrarPaso(1);
+    modal.classList.add('visible');
+  });
+  document.getElementById('cerrar-modal-prestamo').addEventListener('click', () => modal.classList.remove('visible'));
+
+  document.getElementById('paso-siguiente').addEventListener('click', () => {
+    if (pasoActual===1){
+      if (!clienteSelect.value || !Number(document.getElementById('p-monto').value)){
+        CG_TOAST('Completa cliente y monto para continuar', 'alerta'); return;
+      }
+    }
+    if (pasoActual===2 && !datosTemp.firmaAsesor){
+      CG_TOAST('Confirma la firma del asesor para continuar', 'alerta'); return;
+    }
+    if (pasoActual===3 && !datosTemp.firmaCliente){
+      CG_TOAST('Confirma la firma del cliente para continuar', 'alerta'); return;
+    }
+    mostrarPaso(pasoActual+1);
+  });
+  document.getElementById('paso-atras').addEventListener('click', () => mostrarPaso(pasoActual-1));
+
+  document.getElementById('limpiar-asesor').addEventListener('click', () => firmaAsesorPad && firmaAsesorPad.limpiar());
+  document.getElementById('guardar-asesor').addEventListener('click', () => {
+    if (!firmaAsesorPad || firmaAsesorPad.estaVacio()){ CG_TOAST('Dibuja la firma antes de confirmar', 'alerta'); return; }
+    datosTemp.firmaAsesor = firmaAsesorPad.exportarPNG();
+    document.getElementById('estado-asesor').textContent='✔ Firma registrada';
+    document.getElementById('estado-asesor').className='firma-estado ok';
+    CG_TOAST('Firma del asesor guardada', 'exito');
+  });
+
+  document.getElementById('limpiar-cliente').addEventListener('click', () => firmaClientePad && firmaClientePad.limpiar());
+  document.getElementById('guardar-cliente').addEventListener('click', () => {
+    if (!firmaClientePad || firmaClientePad.estaVacio()){ CG_TOAST('Dibuja la firma antes de confirmar', 'alerta'); return; }
+    datosTemp.firmaCliente = firmaClientePad.exportarPNG();
+    document.getElementById('estado-cliente').textContent='✔ Firma registrada';
+    document.getElementById('estado-cliente').className='firma-estado ok';
+    CG_TOAST('Firma del cliente guardada', 'exito');
+  });
+
+  document.getElementById('btn-huella').addEventListener('click', async () => {
+    const icono = document.getElementById('huella-icono');
+    const texto = document.getElementById('huella-texto');
+    texto.textContent = 'Coloca el dedo en el lector del equipo…';
+    const resultado = await CG_FIRMA.verificarHuella({ nombreUsuario:'cliente@credigami', etiqueta:'Cliente CrediGaMi' });
+    if (resultado.ok){
+      datosTemp.huella = resultado;
+      icono.className = 'huella-icono ok';
+      texto.textContent = 'Huella verificada correctamente el ' + new Date(resultado.cuando).toLocaleString('es-HN');
+      CG_TOAST('Huella digital verificada', 'exito');
+    } else {
+      icono.className = 'huella-icono error';
+      if (resultado.motivo==='sin-lector' || resultado.motivo==='no-soportado'){
+        texto.textContent = 'Este equipo no tiene lector de huella disponible.';
+        document.getElementById('huella-respaldo').style.display='block';
+      } else {
+        texto.textContent = 'No se pudo verificar la huella. Intenta de nuevo.';
+      }
+      CG_TOAST('No se pudo verificar la huella', 'alerta');
+    }
+  });
+  document.getElementById('huella-archivo').addEventListener('change', function(){
+    if (this.files && this.files[0]){
+      datosTemp.huella = { ok:true, respaldo:true, archivo:this.files[0].name, cuando:new Date().toISOString() };
+      document.getElementById('huella-icono').className = 'huella-icono ok';
+      document.getElementById('huella-texto').textContent = 'Constancia adjunta: ' + this.files[0].name;
+      CG_TOAST('Constancia de huella adjuntada', 'exito');
+    }
+  });
+
+  document.getElementById('btn-omitir-huella').addEventListener('click', () => {
+    datosTemp.huella = { ok:false, omitida:true, cuando:new Date().toISOString() };
+    document.getElementById('huella-icono').className = 'huella-icono';
+    document.getElementById('huella-texto').textContent = 'Huella omitida por ahora — pendiente de completar.';
+    CG_TOAST('Huella marcada como pendiente, puedes formalizar sin ella', 'aviso');
+  });
+
+  document.getElementById('paso-finalizar').addEventListener('click', () => {
+    // La huella es opcional: si no se verificó ni se omitió explícitamente,
+    // se marca como pendiente automáticamente para no bloquear el registro.
+    if (!datosTemp.huella){
+      datosTemp.huella = { ok:false, omitida:true, cuando:new Date().toISOString() };
+    }
+    const clientes = CG_DATA.clientes.listar();
+    const cliente = clientes.find(c => c.id === clienteSelect.value);
+    const monto = Number(document.getElementById('p-monto').value);
+    const tasa = Number(document.getElementById('p-tasa').value);
+    const plazo = Number(document.getElementById('p-plazo').value);
+    const cuota = calcularCuota(monto, tasa, plazo);
+
+    CG_DATA.prestamos.agregar({
+      clienteId: cliente.id,
+      cliente: cliente.nombre,
+      monto, tasa, plazoMeses: plazo,
+      cuota: Math.round(cuota*100)/100,
+      saldo: monto,
+      estado: 'activo',
+      firmaAsesor: datosTemp.firmaAsesor,
+      firmaCliente: datosTemp.firmaCliente,
+      huella: datosTemp.huella
+    });
+    modal.classList.remove('visible');
+    pintarPrestamos();
+    CG_TOAST('Préstamo formalizado con firmas y huella registradas', 'exito');
+  });
+</script>
+</body>
+</html>

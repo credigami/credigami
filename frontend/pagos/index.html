@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrediGaMi · Pagos y cuotas</title>
+<link rel="icon" href="../../assets/img/logo-credigami.jpeg">
+<link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+<div class="app-shell"></div>
+
+<script src="../../assets/js/data.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script src="../../assets/js/recibo.js"></script>
+<script>
+  const main = CG_LAYOUT.render('pagos', 'Pagos y cuotas', 'Pagos y cuotas');
+
+  main.innerHTML = `
+    <div class="pestanas">
+      <button class="pestana activa" data-tab="pendientes">Cuotas pendientes</button>
+      <button class="pestana" data-tab="pagadas">Historial de pagos</button>
+    </div>
+    <div class="tarjeta">
+      <div class="tarjeta__encabezado">
+        <div><h3 id="titulo-tabla">Cuotas pendientes</h3><p>Marca una cuota como pagada al recibir el efectivo o la transferencia</p></div>
+      </div>
+      <div class="tabla-envoltura">
+        <table>
+          <thead><tr><th>Recibo</th><th>Préstamo</th><th>Cliente</th><th># Cuota</th><th>Monto</th><th>Fecha</th><th>Método</th><th></th></tr></thead>
+          <tbody id="tabla-pagos"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  let vista = 'pendientes';
+  function pintar(){
+    const pagos = CG_DATA.pagos.listar().filter(p => vista==='pendientes' ? p.estado==='pendiente' : p.estado==='pagada');
+    document.getElementById('titulo-tabla').textContent = vista==='pendientes' ? 'Cuotas pendientes' : 'Historial de pagos';
+    const cuerpo = document.getElementById('tabla-pagos');
+    if (!pagos.length){
+      cuerpo.innerHTML = `<tr><td colspan="8"><div class="vacio"><strong>Nada por aquí</strong>No hay registros en esta vista.</div></td></tr>`;
+      return;
+    }
+    cuerpo.innerHTML = pagos.map(p => `
+      <tr>
+        <td class="celda-fuerte">${p.id}</td>
+        <td>${p.prestamoId}</td>
+        <td>${p.cliente}</td>
+        <td>${p.cuotaNo}</td>
+        <td>${CG_DATA.moneda(p.monto)}</td>
+        <td class="celda-suave">${p.fecha}</td>
+        <td>${p.metodo}</td>
+        <td style="text-align:right;">
+          ${p.estado==='pendiente'
+            ? `<button class="btn btn-sm btn-primario" data-pagar="${p.id}">Registrar pago</button>`
+            : `<button class="btn btn-sm btn-linea" data-recibo="${p.id}">Ver recibo</button>`}
+        </td>
+      </tr>`).join('');
+
+    cuerpo.querySelectorAll('[data-pagar]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const actualizado = CG_DATA.pagos.marcarPagada(btn.dataset.pagar, 'Efectivo');
+        CG_DATA.caja.movimiento('ingreso', 'Pago cuota ' + btn.dataset.pagar, actualizado.monto);
+        pintar();
+        CG_TOAST('Pago registrado y reflejado en caja', 'exito');
+        CG_RECIBO.mostrar(actualizado);
+      });
+    });
+    cuerpo.querySelectorAll('[data-recibo]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pago = CG_DATA.pagos.listar().find(x => x.id === btn.dataset.recibo);
+        CG_RECIBO.mostrar(pago);
+      });
+    });
+  }
+  pintar();
+
+  document.querySelectorAll('.pestana').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.pestana').forEach(t=>t.classList.remove('activa'));
+      tab.classList.add('activa');
+      vista = tab.dataset.tab;
+      pintar();
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrediGaMi · Configuración</title>
+<link rel="icon" href="../../assets/img/logo-credigami.jpeg">
+<link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+<div class="app-shell"></div>
+
+<script src="../../assets/js/data.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script>
+  const main = CG_LAYOUT.render('configuracion', 'Configuración', 'Configuración');
+  const config = CG_DATA.config.obtener();
+
+  main.innerHTML = `
+    <div class="tarjeta" style="margin-bottom:18px;">
+      <div class="tarjeta__encabezado"><div><h3>Identidad de marca</h3><p>Logo oficial proporcionado para CrediGaMi</p></div></div>
+      <div class="tarjeta__cuerpo" style="display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
+        <img src="../../assets/img/logo-credigami.jpeg" alt="Logo CrediGaMi"
+             style="height:110px; border:1px solid var(--borde); border-radius:12px; background:#fff; padding:10px;">
+        <div>
+          <div style="font-family:var(--f-titulo); font-weight:800; font-size:22px;">
+            <span style="color:var(--azul-oscuro);">Credi</span><span style="color:var(--naranja);">GaMi</span>
+          </div>
+          <div class="texto-suave" style="font-size:13px; margin-top:2px;">PRÉSTAMOS PEQUEÑOS · TU APOYO CRECE</div>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <span title="#153A66" style="width:26px; height:26px; border-radius:7px; background:#153A66; display:inline-block; border:1px solid var(--borde);"></span>
+            <span title="#F2941D" style="width:26px; height:26px; border-radius:7px; background:#F2941D; display:inline-block; border:1px solid var(--borde);"></span>
+            <span title="#181C22" style="width:26px; height:26px; border-radius:7px; background:#181C22; display:inline-block; border:1px solid var(--borde);"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start;">
+      <div class="tarjeta">
+        <div class="tarjeta__encabezado"><h3>Datos de la empresa</h3></div>
+        <div class="tarjeta__cuerpo">
+          <div class="campo"><label>Nombre comercial</label><input type="text" id="cfg-empresa" value="${config.empresa}"></div>
+          <div class="campo"><label>Subtítulo</label><input type="text" id="cfg-subtitulo" value="${config.subtitulo}"></div>
+          <div class="campo"><label>Eslogan</label><input type="text" id="cfg-eslogan" value="${config.eslogan}"></div>
+          <button class="btn btn-oscuro" id="guardar-empresa">Guardar cambios</button>
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <div class="tarjeta__encabezado"><h3>Parámetros de préstamos</h3></div>
+        <div class="tarjeta__cuerpo">
+          <div class="fila-campos">
+            <div class="campo"><label>Tasa de interés por defecto (%)</label><input type="number" id="cfg-tasa" value="${config.tasaDefault}"></div>
+            <div class="campo"><label>Mora por defecto (%)</label><input type="number" id="cfg-mora" value="${config.moraDefault}"></div>
+          </div>
+          <button class="btn btn-oscuro" id="guardar-parametros">Guardar parámetros</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tarjeta" style="margin-top:18px;">
+      <div class="tarjeta__encabezado"><h3>Usuarios del sistema</h3></div>
+      <div class="tabla-envoltura">
+        <table>
+          <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th></tr></thead>
+          <tbody>
+            ${config.usuarios.map(u => `<tr><td class="celda-fuerte">${u.nombre}</td><td>${u.usuario}</td><td>${u.rol}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('guardar-empresa').addEventListener('click', () => {
+    config.empresa = document.getElementById('cfg-empresa').value;
+    config.subtitulo = document.getElementById('cfg-subtitulo').value;
+    config.eslogan = document.getElementById('cfg-eslogan').value;
+    CG_DATA.config.guardar(config);
+    CG_TOAST('Datos de la empresa actualizados', 'exito');
+  });
+  document.getElementById('guardar-parametros').addEventListener('click', () => {
+    config.tasaDefault = Number(document.getElementById('cfg-tasa').value);
+    config.moraDefault = Number(document.getElementById('cfg-mora').value);
+    CG_DATA.config.guardar(config);
+    CG_TOAST('Parámetros de préstamos actualizados', 'exito');
+  });
+</script>
+</body>
+</html>

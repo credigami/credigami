@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrediGaMi · Reportes</title>
+<link rel="icon" href="../../assets/img/logo-credigami.jpeg">
+<link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+<div class="app-shell"></div>
+
+<script src="../../assets/js/data.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script>
+  const main = CG_LAYOUT.render('reportes', 'Reportes', 'Reportes');
+
+  const prestamos = CG_DATA.prestamos.listar();
+  const pagos = CG_DATA.pagos.listar();
+  const totalColocado = prestamos.reduce((s,p)=>s+p.monto,0);
+  const totalRecuperado = pagos.filter(p=>p.estado==='pagada').reduce((s,p)=>s+p.monto,0);
+  const carteraEnMora = prestamos.filter(p=>p.mora>0).reduce((s,p)=>s+p.saldo,0);
+
+  main.innerHTML = `
+    <div class="grid-kpi">
+      <div class="kpi"><div class="kpi__etiqueta">Total colocado</div><div class="kpi__valor">${CG_DATA.moneda(totalColocado)}</div></div>
+      <div class="kpi"><div class="kpi__etiqueta">Total recuperado</div><div class="kpi__valor">${CG_DATA.moneda(totalRecuperado)}</div></div>
+      <div class="kpi"><div class="kpi__etiqueta">Cartera en mora</div><div class="kpi__valor">${CG_DATA.moneda(carteraEnMora)}</div></div>
+      <div class="kpi"><div class="kpi__etiqueta">Préstamos registrados</div><div class="kpi__valor">${prestamos.length}</div></div>
+    </div>
+
+    <div class="tarjeta">
+      <div class="tarjeta__encabezado">
+        <div><h3>Detalle de préstamos</h3><p>Reporte completo de la cartera para exportar</p></div>
+        <button class="btn btn-oscuro" id="exportar-csv">Exportar CSV</button>
+      </div>
+      <div class="tabla-envoltura">
+        <table>
+          <thead><tr><th>Código</th><th>Cliente</th><th>Monto</th><th>Tasa</th><th>Plazo</th><th>Saldo</th><th>Estado</th></tr></thead>
+          <tbody>
+            ${prestamos.map(p => `
+              <tr>
+                <td class="celda-fuerte">${p.id}</td>
+                <td>${p.cliente}</td>
+                <td>${CG_DATA.moneda(p.monto)}</td>
+                <td>${p.tasa}%</td>
+                <td>${p.plazoMeses} m</td>
+                <td>${CG_DATA.moneda(p.saldo)}</td>
+                <td>${p.estado}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('exportar-csv').addEventListener('click', () => {
+    const filas = [['Codigo','Cliente','Monto','Tasa','Plazo','Saldo','Estado']];
+    prestamos.forEach(p => filas.push([p.id,p.cliente,p.monto,p.tasa,p.plazoMeses,p.saldo,p.estado]));
+    const csv = filas.map(f => f.join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'reporte_credigami.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    CG_TOAST('Reporte exportado', 'exito');
+  });
+</script>
+</body>
+</html>
