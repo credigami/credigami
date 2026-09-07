@@ -58,15 +58,24 @@
       </div>
       <div class="modal__pie">
         <button type="button" class="btn btn-linea" id="cancelar-modal-cliente">Cancelar</button>
-        <button type="submit" class="btn btn-primario">Guardar cliente</button>
+        <button type="submit" class="btn btn-primario" id="btn-guardar-cliente">Guardar cliente</button>
       </div>
     </form>
   </div>
 </div>
 
+<!-- Firebase (necesario porque data.js ya no usa localStorage, usa Firestore) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <script src="../../assets/js/data.js"></script>
 <script src="../../assets/js/layout.js"></script>
 <script>
+  if (!localStorage.getItem('cg_usuario')) {
+    window.location.href = '../login/index.html';
+  }
+
   const main = CG_LAYOUT.render('clientes', 'Clientes', 'Clientes');
 
   main.innerHTML = `
@@ -100,7 +109,7 @@
 
     const cuerpo = document.getElementById('tabla-clientes');
     if (!filtrados.length){
-      cuerpo.innerHTML = `<tr><td colspan="6"><div class="vacio"><strong>Sin resultados</strong>Intenta con otro nombre o DNI.</div></td></tr>`;
+      cuerpo.innerHTML = `<tr><td colspan="7"><div class="vacio"><strong>${clientes.length ? 'Sin resultados' : 'Todavía no hay clientes'}</strong>${clientes.length ? 'Intenta con otro nombre o DNI.' : 'Registra tu primer cliente con el botón "Nuevo cliente".'}</div></td></tr>`;
       return;
     }
     cuerpo.innerHTML = filtrados.map(c => `
@@ -120,14 +129,21 @@
     cuerpo.querySelectorAll('[data-eliminar]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (confirm('¿Eliminar este cliente del directorio?')){
-          CG_DATA.clientes.eliminar(btn.dataset.eliminar);
-          pintarClientes(document.getElementById('buscar-cliente').value);
-          CG_TOAST('Cliente eliminado', 'alerta');
+          CG_DATA.clientes.eliminar(btn.dataset.eliminar)
+            .then(() => CG_TOAST('Cliente eliminado', 'alerta'))
+            .catch(() => CG_TOAST('No se pudo eliminar, revisa tu conexión', 'alerta'));
         }
       });
     });
   }
+
   pintarClientes('');
+
+  window.addEventListener('cg:datos-actualizados', (e) => {
+    if (e.detail.coleccion === 'clientes') {
+      pintarClientes(document.getElementById('buscar-cliente').value);
+    }
+  });
 
   document.getElementById('buscar-cliente').addEventListener('input', e => pintarClientes(e.target.value));
 
@@ -138,6 +154,10 @@
 
   document.getElementById('form-cliente').addEventListener('submit', function(e){
     e.preventDefault();
+    const boton = document.getElementById('btn-guardar-cliente');
+    boton.disabled = true;
+    boton.textContent = 'Guardando...';
+
     CG_DATA.clientes.agregar({
       nombre: document.getElementById('c-nombre').value.trim(),
       dni: document.getElementById('c-dni').value.trim(),
@@ -145,11 +165,16 @@
       tipoNegocio: document.getElementById('c-negocio').value,
       direccion: document.getElementById('c-direccion').value.trim(),
       referencia: document.getElementById('c-referencia').value.trim()
+    }).then(() => {
+      e.target.reset();
+      modal.classList.remove('visible');
+      CG_TOAST('Cliente guardado correctamente', 'exito');
+    }).catch(() => {
+      CG_TOAST('No se pudo guardar, revisa tu conexión', 'alerta');
+    }).finally(() => {
+      boton.disabled = false;
+      boton.textContent = 'Guardar cliente';
     });
-    this.reset();
-    modal.classList.remove('visible');
-    pintarClientes('');
-    CG_TOAST('Cliente guardado correctamente', 'exito');
   });
 </script>
 </body>
